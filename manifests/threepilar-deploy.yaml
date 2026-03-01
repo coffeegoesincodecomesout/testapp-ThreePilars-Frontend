@@ -1,0 +1,77 @@
+---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns1
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threepilar-frontend-deployment
+  namespace: ns1
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: threepilar-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  serviceAccount: otel-collector-sidecar
+  template:
+    metadata:
+      labels:
+        app: threepilar-frontend
+      annotations:
+        sidecar.opentelemetry.io/inject: "true"
+    spec:
+      containers:
+      - name: threepilar-frontend
+        image: quay.io/rhn_support_nigsmith/testapp-threepilars-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8090
+        env:
+        - name: BACKEND_URL
+          value: "http://threepilar-backend-service:8091"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threepilar-backend-deployment
+  namespace: ns1
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: threepilar-backend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  serviceAccount: otel-collector-sidecar
+  template:
+    metadata:
+      labels:
+        app: threepilar-backend
+      annotations:
+        sidecar.opentelemetry.io/inject: "true"
+    spec:
+      containers:
+      - name: threepilar-backend
+        image: quay.io/rhn_support_nigsmith/testapp-threepilars-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8091
